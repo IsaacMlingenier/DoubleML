@@ -996,13 +996,7 @@ with tab5:
         - Se agregó lectura de **CSV y Excel** por carga manual y por ruta local.
         - Se ajustó el selector de tamaño de muestra para que no falle con bases pequeñas.
         - Se incluyeron métricas de modelos auxiliares: AUC, Brier y accuracy.
-        - Se incluyeron diagnósticos de propensity score y pesos IPTW.
-
-        ### Si persiste AxiosError 403 al subir archivos
-
-        Ese error suele estar asociado con la comunicación navegador-servidor o con la configuración del entorno de despliegue.
-        Para desarrollo local puede usar la lectura local o crear un archivo `.streamlit/config.toml` con los parámetros incluidos
-        en el paquete descargable. En producción, no desactive protecciones de seguridad sin revisar la configuración del servidor.
+        - Se incluyeron diagnósticos de propensity score y pesos IPTW.        
         """
     )
 
