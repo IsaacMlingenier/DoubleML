@@ -23,6 +23,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+from pathlib import Path
+from io import BytesIO
 
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -38,6 +40,15 @@ try:
 except Exception:
     DOUBLEML_AVAILABLE = False
 
+
+
+
+def make_one_hot_encoder():
+    """Crea OneHotEncoder compatible con versiones nuevas y antiguas de scikit-learn."""
+    try:
+        return make_one_hot_encoder()
+    except TypeError:
+        return OneHotEncoder(handle_unknown="ignore", sparse=False)
 
 # ============================================================
 # Configuración general
@@ -96,7 +107,7 @@ def prepare_model_matrix(df, y_col, d_col, x_cols):
     categorical_transformer = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
+            ("onehot", make_one_hot_encoder())
         ]
     )
 
@@ -319,118 +330,95 @@ def outcome_rate_plot(df, group_col, outcome_col, title, x_title, y_title):
 
 
 # ============================================================
-# Sidebar
+# Sidebar y carga robusta de datos
 # ============================================================
 
+@st.cache_data(show_spinner=False)
+def load_uploaded_csv(file_bytes: bytes) -> pd.DataFrame:
+    """
+    Lee un CSV subido desde el navegador de forma robusta.
+    Usa bytes y BytesIO para evitar errores de permisos o de objeto UploadedFile.
+    """
+    encodings = ["utf-8", "utf-8-sig", "latin1"]
+    last_error = None
+
+    for enc in encodings:
+        try:
+            return pd.read_csv(BytesIO(file_bytes), encoding=enc, low_memory=False)
+        except UnicodeDecodeError as e:
+            last_error = e
+        except Exception as e:
+            last_error = e
+
+    raise ValueError(f"No fue posible leer el CSV cargado. Último error: {last_error}")
+
+
+@st.cache_data(show_spinner=False)
+def load_local_csv(path: str) -> pd.DataFrame:
+    """Lee un CSV local cuando el archivo está en la carpeta del proyecto o en una ruta válida."""
+    csv_path = Path(path).expanduser()
+    if not csv_path.exists():
+        raise FileNotFoundError(f"No se encontró el archivo: {csv_path}")
+    return pd.read_csv(csv_path, low_memory=False)
+
+
 st.sidebar.header("1. Cargar datos")
 
-from pathlib import Path
- 
-@st.cache_data(show_spinner=False)
-
-def load_uploaded_csv(uploaded_file):
-
-    return pd.read_csv(uploaded_file)
- 
-@st.cache_data(show_spinner=False)
-
-def load_local_csv(path):
-
-    return pd.read_csv(path)
- 
-st.sidebar.header("1. Cargar datos")
- 
 modo_carga = st.sidebar.radio(
-
     "Seleccione el método de carga",
-
     [
-
         "Subir archivo CSV manualmente",
-
         "Leer CSV local en la carpeta del proyecto"
-
     ],
-
     index=0
-
 )
- 
+
 df = None
- 
+
 if modo_carga == "Subir archivo CSV manualmente":
-
     uploaded_file = st.sidebar.file_uploader(
-
         "Suba el archivo CSV desde su equipo",
-
-        type=["csv"]
-
+        type=["csv"],
+        accept_multiple_files=False,
+        help="Descargue el CSV en su equipo y súbalo desde aquí. No use enlaces sandbox:/ ni URL externas."
     )
- 
+
     if uploaded_file is None:
-
         st.info(
-
-            "Descargue el CSV en su equipo y súbalo aquí. "
-
-            "No use enlaces tipo sandbox:/ ni URL externas."
-
+            "Suba el archivo CSV para iniciar el análisis. "
+            "Si está usando Streamlit Cloud, cargue el archivo desde su computador con este botón."
         )
-
         st.stop()
- 
+
     try:
-
-        df = load_uploaded_csv(uploaded_file)
-
+        df = load_uploaded_csv(uploaded_file.getvalue())
     except Exception as e:
-
         st.error(f"No fue posible leer el CSV cargado: {e}")
-
         st.stop()
- 
+
 else:
-
     local_path = st.sidebar.text_input(
-
         "Ruta local del CSV",
-
         value="tb_pulmonar_sintetica_double_ml_100k.csv"
-
     )
- 
-    if not Path(local_path).exists():
 
-        st.warning(
-
-            "No se encontró el archivo CSV. "
-
-            "Coloque el archivo en la misma carpeta de esta app "
-
-            "o escriba la ruta completa."
-
-        )
-
-        st.stop()
- 
     try:
-
         df = load_local_csv(local_path)
-
-    except Exception as e:
-
-        st.error(f"No fue posible leer el CSV local: {e}")
-
+    except FileNotFoundError:
+        st.warning(
+            "No se encontró el archivo CSV. Colóquelo en la misma carpeta de esta app "
+            "o escriba la ruta completa. En Streamlit Cloud, es más seguro usar la opción de subir archivo manualmente."
+        )
         st.stop()
- 
-st.sidebar.success(
+    except Exception as e:
+        st.error(f"No fue posible leer el CSV local: {e}")
+        st.stop()
 
-    f"Datos cargados: {df.shape[0]:,} filas y {df.shape[1]:,} columnas"
+# Limpieza básica de nombres de columnas para evitar espacios accidentales
+if df is not None:
+    df.columns = df.columns.astype(str).str.strip()
 
-)
- 
-st.sidebar.success(f"Datos cargados: {df.shape[0]:,} filas y {df.shape[1]:,} columnas")
+st.sidebar.success(f"Datos cargados correctamente: {df.shape[0]:,} filas y {df.shape[1]:,} columnas")
 
 st.sidebar.header("2. Configurar análisis")
 
