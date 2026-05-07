@@ -70,21 +70,41 @@ st.markdown(
 
 @st.cache_data(show_spinner=False)
 def read_csv_from_bytes(file_bytes: bytes) -> pd.DataFrame:
-    """Lee CSV desde bytes con varios encodings y separadores probables."""
+    """
+    Lee CSV desde bytes con varios encodings y separadores probables.
+
+    Nota técnica:
+    - Cuando sep=None se usa engine="python" para autodetectar separador.
+    - No se usa low_memory con engine="python", porque pandas no lo soporta.
+    - Para separadores explícitos se usa primero engine="c" y low_memory=False.
+    """
     encodings = ["utf-8", "utf-8-sig", "latin1", "cp1252"]
-    separators = [None, ",", ";", "\t"]
+    separators = [None, ",", ";", "\t", "|"]
     last_error = None
 
     for enc in encodings:
         for sep in separators:
             try:
+                buffer = BytesIO(file_bytes)
+
+                if sep is None:
+                    # Autodetección de separador: requiere engine="python".
+                    return pd.read_csv(
+                        buffer,
+                        encoding=enc,
+                        sep=None,
+                        engine="python"
+                    )
+
+                # Separador explícito: engine C permite low_memory=False.
                 return pd.read_csv(
-                    BytesIO(file_bytes),
+                    buffer,
                     encoding=enc,
                     sep=sep,
-                    engine="python",
+                    engine="c",
                     low_memory=False
                 )
+
             except Exception as exc:
                 last_error = exc
 
