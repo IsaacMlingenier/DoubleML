@@ -10,6 +10,7 @@ tags:
 pinned: false
 short_description: 'Causal Inference Simulated TB '
 license: mit
+---
 
 Aplicación Streamlit: Double ML en tuberculosis pulmonar - versión 2
 Instalación
