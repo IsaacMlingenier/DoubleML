@@ -66,13 +66,6 @@ st.markdown(
 # Funciones auxiliares
 # ============================================================
 
-@st.cache_data(show_spinner=False)
-def load_data(uploaded_file):
-    if uploaded_file is not None:
-        return pd.read_csv(uploaded_file)
-    return None
-
-
 def safe_numeric_binary(series):
     return pd.to_numeric(series, errors="coerce").fillna(0).astype(int)
 
@@ -331,17 +324,59 @@ def outcome_rate_plot(df, group_col, outcome_col, title, x_title, y_title):
 
 st.sidebar.header("1. Cargar datos")
 
-uploaded_file = st.sidebar.file_uploader(
-    "Carga el archivo tb_pulmonar_sintetica_double_ml_100k.csv",
-    type=["csv"]
+from pathlib import Path
+@st.cache_data(show_spinner=False)
+def load_uploaded_csv(uploaded_file):
+return pd.read_csv(uploaded_file)
+@st.cache_data(show_spinner=False)
+def load_local_csv(path):
+return pd.read_csv(path)
+st.sidebar.header("1. Cargar datos")
+modo_carga = st.sidebar.radio(
+"Seleccione el método de carga",
+[
+"Subir archivo CSV manualmente",
+"Leer CSV local en la carpeta del proyecto"
+],
+index=0
 )
-
-df = load_data(uploaded_file)
-
-if df is None:
-    st.info("Carga el archivo CSV sintético para iniciar el análisis.")
-    st.stop()
-
+df = None
+if modo_carga == "Subir archivo CSV manualmente":
+uploaded_file = st.sidebar.file_uploader(
+"Suba el archivo CSV desde su equipo",
+type=["csv"]
+)
+if uploaded_file is None:
+st.info(
+"Descargue el CSV en su equipo y súbalo aquí. "
+"No use enlaces tipo sandbox:/ ni URL externas."
+)
+st.stop()
+try:
+df = load_uploaded_csv(uploaded_file)
+except Exception as e:
+st.error(f"No fue posible leer el CSV cargado: {e}")
+st.stop()
+else:
+local_path = st.sidebar.text_input(
+"Ruta local del CSV",
+value="tb_pulmonar_sintetica_double_ml_100k.csv"
+)
+if not Path(local_path).exists():
+st.warning(
+"No se encontró el archivo CSV. "
+"Coloque el archivo en la misma carpeta de esta app "
+"o escriba la ruta completa."
+)
+st.stop()
+try:
+df = load_local_csv(local_path)
+except Exception as e:
+st.error(f"No fue posible leer el CSV local: {e}")
+st.stop()
+st.sidebar.success(
+f"Datos cargados: {df.shape[0]:,} filas y {df.shape[1]:,} columnas"
+)
 st.sidebar.success(f"Datos cargados: {df.shape[0]:,} filas y {df.shape[1]:,} columnas")
 
 st.sidebar.header("2. Configurar análisis")
