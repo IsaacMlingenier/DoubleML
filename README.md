@@ -10,7 +10,6 @@ tags:
 pinned: false
 short_description: 'Causal Inference Simulated TB '
 license: mit
----
 
 Aplicación Streamlit: Double ML en tuberculosis pulmonar - versión 2
 Instalación
@@ -40,3 +39,4 @@ Tiempo hasta desenlace según mortalidad.
 Comparación del ATE entre modelos.
 Propensity score por grupo de tratamiento.
 Distribución de pesos IPTW.
+_____
