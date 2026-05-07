@@ -986,7 +986,7 @@ with tab4:
 # ============================================================
 
 with tab5:
-    st.subheader("Notas técnicas y solución del error AxiosError 403")
+    st.subheader("Notas técnicas")
     st.markdown(
         """
         ### Cambios aplicados en esta versión
