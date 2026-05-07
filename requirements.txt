@@ -2,5 +2,8 @@ streamlit
 pandas
 numpy
 scikit-learn
-doubleml
 plotly
+DoubleML
+openpyxl
+scipy
+statsmodels
